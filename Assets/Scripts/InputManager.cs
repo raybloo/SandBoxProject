@@ -28,10 +28,7 @@ public class InputManager : MonoBehaviour
 
     public void ManageActions(bool[] active)
     {
-        Debug.Log("Move fwd: " + active[(int)Action.moveForward]);
-        Debug.Log("Move bwd: " + active[(int)Action.moveBackward]);
-        Debug.Log("Move left: " + active[(int)Action.moveLeft]);
-        Debug.Log("Move right: " + active[(int)Action.moveRight]);
+        //Movements
         if (active[(int)Action.moveForward] || active[(int)Action.moveBackward] || active[(int)Action.moveLeft] || active[(int)Action.moveRight])
         {
             playerSuperviser.moving = true;
