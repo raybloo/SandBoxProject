@@ -25,41 +25,41 @@ public class PlayerMovementSuperviser: MonoBehaviour
             {
                 if (left && !right)
                 {
-                    walkMovement = new Vector3(-0.70710678118f * Time.deltaTime * speed, 0f, 0.70710678118f * Time.deltaTime * speed);
+                    walkMovement = new Vector3(-0.70710678118f * Time.deltaTime * walkSpeed, 0f, 0.70710678118f * Time.deltaTime * walkSpeed);
                 }
                 else if (right && !left)
                 {
-                    walkMovement = new Vector3(0.70710678118f * Time.deltaTime * speed, 0f, 0.70710678118f * Time.deltaTime * speed);
+                    walkMovement = new Vector3(0.70710678118f * Time.deltaTime * walkSpeed, 0f, 0.70710678118f * Time.deltaTime * walkSpeed);
                 }
                 else
                 {
-                    walkMovement = new Vector3(0f, 0f, Time.deltaTime * speed);
+                    walkMovement = new Vector3(0f, 0f, Time.deltaTime * walkSpeed);
                 }
             }
             else if (backward && !forward)
             {
                 if (left && !right)
                 {
-                    walkMovement = new Vector3(-0.70710678118f * Time.deltaTime * speed, 0f, -0.70710678118f * Time.deltaTime * speed);
+                    walkMovement = new Vector3(-0.70710678118f * Time.deltaTime * walkSpeed, 0f, -0.70710678118f * Time.deltaTime * walkSpeed);
                 }
                 else if (right && !left)
                 {
-                    walkMovement = new Vector3(0.70710678118f * Time.deltaTime * speed, 0f, -0.70710678118f * Time.deltaTime * speed);
+                    walkMovement = new Vector3(0.70710678118f * Time.deltaTime * walkSpeed, 0f, -0.70710678118f * Time.deltaTime * walkSpeed);
                 }
                 else
                 {
-                    walkMovement = new Vector3(0f, 0f, -Time.deltaTime * speed);
+                    walkMovement = new Vector3(0f, 0f, -Time.deltaTime * walkSpeed);
                 }
             }
             else
             {
                 if (left && !right)
                 {
-                    walkMovement = new Vector3(-Time.deltaTime * speed, 0f, 0f);
+                    walkMovement = new Vector3(-Time.deltaTime * walkSpeed, 0f, 0f);
                 }
                 else if (right && !left)
                 {
-                    walkMovement = new Vector3(Time.deltaTime * speed, 0f, 0f);
+                    walkMovement = new Vector3(Time.deltaTime * walkSpeed, 0f, 0f);
                 }
                 else
                 {
