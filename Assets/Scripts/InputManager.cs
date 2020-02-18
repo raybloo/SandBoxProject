@@ -67,7 +67,7 @@ public class InputManager : MonoBehaviour
                 }
             }
         }
-        actionManager.ManageActions(activeActions);
+        //actionManager.ManageActions(activeActions);
     }
 
     private void SetupBasicKeyBinding()

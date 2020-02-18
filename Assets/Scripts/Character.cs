@@ -6,8 +6,8 @@ public abstract class Character : MonoBehaviour
 {
     [Header("Stats Variable")]
     protected float health;
-    private float groundSpeed;
-    private int status;
+    protected float groundSpeed;
+    protected int status;
     abstract public void Act(bool[] actions);
 
 }
