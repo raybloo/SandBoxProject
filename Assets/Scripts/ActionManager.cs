@@ -1,90 +1,71 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine; 
+using UnityEngine;
+using System;
 
 public class ActionManager : MonoBehaviour
 {
     public static readonly int actionsLength = 30;
-    
+    public static readonly int axisLength = 2;
+
     public enum Action
     {
-        donothing,
+        menuDown,
+        menuUp,
+        menuSelect,
         moveForward,
         moveBackward,
         moveLeft,
         moveRight,
-        jump
+        jump,
     }
 
+    public enum Axis
+    {
+        cameraX,
+        cameraY
+    }
+
+    [Header("Actions Receiver")]
     public PlayerSuperviser playerSuperviser;
+    public Character character;
+
+    [Header("Actions Receiver")]
     public InputManager keyboardManager;
 
-    private Action[] exploreActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight };
-
+    private Action[] exploreActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight};
+    
+    private Action[] characterActionConverter;
+    private Action[] playerActionConverter;
     // Start is called before the first frame update
     void Start()
     {
         keyboardManager.SetNewActionSet(new Action[0],exploreActionSet);
     }
 
-    public void ManageActions(bool[] active)
+    void fillInConverters()
     {
-        //Movements
-        if (active[(int)Action.moveForward] || active[(int)Action.moveBackward] || active[(int)Action.moveLeft] || active[(int)Action.moveRight])
+        characterActionConverter = new Action[Enum.GetNames(typeof(Character.Action)).Length];
+        foreach(Character.Action charAction in Enum.GetValues(typeof(Character.Action)))
         {
-            playerSuperviser.moving = true;
-            if (active[(int)Action.moveForward] && !active[(int)Action.moveBackward])
+            foreach (Action regAction in Enum.GetValues(typeof(Action)))
             {
-                if (active[(int)Action.moveLeft] && !active[(int)Action.moveRight])
+                if (Enum.GetName(typeof(Character.Action),charAction) == Enum.GetName(typeof(Action), regAction))
                 {
-                    playerSuperviser.moveVector = new Vector3(-0.70710678118f * Time.deltaTime * playerSuperviser.speed, 0f , 0.70710678118f * Time.deltaTime * playerSuperviser.speed);
-                }
-                else if (active[(int)Action.moveRight] && !active[(int)Action.moveLeft])
-                {
-                    playerSuperviser.moveVector = new Vector3(0.70710678118f * Time.deltaTime * playerSuperviser.speed, 0f, 0.70710678118f * Time.deltaTime * playerSuperviser.speed);
-                }
-                else
-                {
-                    playerSuperviser.moveVector = new Vector3(0f, 0f, Time.deltaTime * playerSuperviser.speed);
+                    characterActionConverter[(int)charAction] = regAction;
                 }
             }
-            else if (active[(int)Action.moveBackward] && !active[(int)Action.moveForward])
-            {
-                if (active[(int)Action.moveLeft] && !active[(int)Action.moveRight])
-                {
-                    playerSuperviser.moveVector = new Vector3(-0.70710678118f * Time.deltaTime * playerSuperviser.speed, 0f, -0.70710678118f * Time.deltaTime * playerSuperviser.speed);
-                }
-                else if (active[(int)Action.moveRight] && !active[(int)Action.moveLeft])
-                {
-                    playerSuperviser.moveVector = new Vector3(0.70710678118f * Time.deltaTime * playerSuperviser.speed, 0f, -0.70710678118f * Time.deltaTime * playerSuperviser.speed);
-                }
-                else
-                {
-                    playerSuperviser.moveVector = new Vector3(0f, 0f, -Time.deltaTime * playerSuperviser.speed);
-                }
-            }
-            else
-            {
-                if (active[(int)Action.moveLeft] && !active[(int)Action.moveRight])
-                {
-                    playerSuperviser.moveVector = new Vector3(-Time.deltaTime * playerSuperviser.speed, 0f, 0f);
-                }
-                else if (active[(int)Action.moveRight] && !active[(int)Action.moveLeft])
-                {
-                    playerSuperviser.moveVector = new Vector3(Time.deltaTime * playerSuperviser.speed, 0f, 0f);
-                }
-                else
-                {
-                    playerSuperviser.moving = false;
-                    playerSuperviser.moveVector = new Vector3(0f, 0f, 0f);
-                }
-            }
-            
-        } 
-        else
+        }
+        playerActionConverter = new Action[Enum.GetNames(typeof(PlayerSuperviser.Action)).Length];
+        foreach (PlayerSuperviser.Action playerAction in Enum.GetValues(typeof(PlayerSuperviser.Action)))
         {
-            playerSuperviser.moving = false;
-            playerSuperviser.moveVector = new Vector3(0f, 0f, 0f);
+            foreach (Action regAction in Enum.GetValues(typeof(Action)))
+            {
+                if (Enum.GetName(typeof(PlayerSuperviser.Action), playerAction) == Enum.GetName(typeof(Action), regAction))
+                {
+                    playerActionConverter[(int)playerAction] = regAction;
+                }
+            }
         }
     }
 

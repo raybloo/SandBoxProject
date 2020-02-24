@@ -4,10 +4,16 @@ using UnityEngine;
 
 public class PlayerSuperviser : MonoBehaviour
 {
-    public float speed = 20f;
-    public bool moving = false;
-    public Vector3 moveVector = new Vector3();
+    public enum Action
+    {
+        menuDown,
+        menuUp,
+        menuSelect,
+    }
 
+    public enum Axis
+    {
+    }
     // Start is called before the first frame update
     void Start()
     {
@@ -17,10 +23,7 @@ public class PlayerSuperviser : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(moving)
-        {
-            transform.position += moveVector;
-        }
+
     }
 
 }

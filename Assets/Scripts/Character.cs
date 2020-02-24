@@ -4,6 +4,22 @@ using UnityEngine;
 
 public abstract class Character : MonoBehaviour
 {
+    public enum Action
+    {
+        moveForward,
+        moveBackward,
+        moveLeft,
+        moveRight,
+        jump
+    }
+
+    public enum Axis
+    {
+        cameraX,
+        cameraY
+    }
+
+
     [Header("Stats Variable")]
     protected float health;
     protected float groundSpeed;
