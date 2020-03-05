@@ -92,7 +92,7 @@ public class InputManager : MonoBehaviour
                 axisValues[(int)currentAxisSet[i]] = Input.GetAxis(axisBindings[(int)currentAxisSet[i]]);
             }
         }
-        //actionManager.ManageActions(activeActions);
+        actionManager.ManageActions(activeActions, axisValues);
     }
 
     public void SetupBasicKeyBinding()
@@ -102,6 +102,6 @@ public class InputManager : MonoBehaviour
         keyBindings[(int)ActionManager.Action.moveLeft] = new List<KeyCode>() { KeyCode.A };
         keyBindings[(int)ActionManager.Action.moveRight] = new List<KeyCode>() { KeyCode.D };
         axisBindings[(int)ActionManager.Axis.cameraX] = "Mouse X";
-        axisBindings[(int)ActionManager.Axis.cameraX] = "Mouse Y";
+        axisBindings[(int)ActionManager.Axis.cameraY] = "Mouse Y";
     }
 }

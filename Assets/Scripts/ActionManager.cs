@@ -5,9 +5,10 @@ using System;
 
 public class ActionManager : MonoBehaviour
 {
-    public static readonly int actionsLength = 30;
-    public static readonly int axisLength = 2;
+    
+    
 
+    public static readonly int actionsLength = 8;
     public enum Action
     {
         menuDown,
@@ -20,6 +21,7 @@ public class ActionManager : MonoBehaviour
         jump,
     }
 
+    public static readonly int axisLength = 2;
     public enum Axis
     {
         cameraX,
@@ -30,17 +32,36 @@ public class ActionManager : MonoBehaviour
     public PlayerSuperviser playerSuperviser;
     public Character character;
 
-    [Header("Actions Receiver")]
-    public InputManager keyboardManager;
+    [Header("Input Source")]
+    public InputManager inputManager;
 
-    private Action[] exploreActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight};
+    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight};
+    private Axis[] basicAxisSet = new Axis[] { Axis.cameraX, Axis.cameraY };
     
     private Action[] characterActionConverter;
     private Action[] playerActionConverter;
     // Start is called before the first frame update
     void Start()
     {
-        keyboardManager.SetNewActionSet(new Action[0],exploreActionSet);
+        fillInConverters();
+        inputManager.SetNewActionSet(new Action[0],basicActionSet);
+        inputManager.SetNewAxisSet(basicAxisSet);
+    }
+
+    public void ManageActions(bool[] activeActions, float[] axisValues)
+    {
+        bool[] playerActiveActions = new bool[playerActionConverter.Length];
+        for(int playerAction = 0; playerAction < playerActionConverter.Length; playerAction++)
+        {
+            playerActiveActions[playerAction] = activeActions[(int)playerActionConverter[playerAction]];
+        }
+        playerSuperviser.ManageActions(playerActiveActions);
+        bool[] characterActiveActions = new bool[characterActionConverter.Length];
+        for (int charAction = 0; charAction < characterActionConverter.Length; charAction++)
+        {
+            characterActiveActions[charAction] = activeActions[(int)characterActionConverter[charAction]];
+        }
+        character.Act(characterActiveActions, axisValues);
     }
 
     void fillInConverters()
@@ -67,6 +88,7 @@ public class ActionManager : MonoBehaviour
                 }
             }
         }
+
     }
 
     // Update is called once per frame

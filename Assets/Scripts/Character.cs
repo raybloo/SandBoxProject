@@ -4,6 +4,7 @@ using UnityEngine;
 
 public abstract class Character : MonoBehaviour
 {
+    public static readonly int actionsLength = 5;
     public enum Action
     {
         moveForward,
@@ -13,10 +14,18 @@ public abstract class Character : MonoBehaviour
         jump
     }
 
+    public static readonly int axisLength = 2;
     public enum Axis
     {
         cameraX,
         cameraY
+    }
+
+    public enum MoveState
+    {
+        grounded,
+        flying,
+        driving
     }
 
 
@@ -24,6 +33,6 @@ public abstract class Character : MonoBehaviour
     protected float health;
     protected float groundSpeed;
     protected int status;
-    abstract public void Act(bool[] actions);
+    abstract public void Act(bool[] actions, float[] axis);
 
 }
