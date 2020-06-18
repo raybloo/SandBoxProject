@@ -13,11 +13,24 @@ public class UnityChanCharacter : Character
 
     //Movement
     private MoveState moveState = MoveState.grounded;
+
+
+    //Self-Induced
     private bool moving = false;
-    private Vector3 moveVector = new Vector3(0f,0f,0f);
+    private Vector3 moveVector = new Vector3(0f, 0f, 0f);
+    private Vector3 pastMoveVector = new Vector3(0f, 0f, 0f);
+    //Ground
     private float currRunSpeed = 10f;
     private float maxRunSpeed = 10f;
-    private float runAccel = 0.2f;
+    private float runAccel = 300f;
+    private float sideRunPenalty = 0.9f;
+    private float backRunPenalty = 0.8f;
+    //Aerial
+
+
+    //Externally-induced
+    //Knock
+    private Vector3 knockVector = new Vector3(0f, 0f, 0f);
 
     private void Start()
     {
@@ -59,11 +72,11 @@ public class UnityChanCharacter : Character
                     {
                         if (active[(int)Action.moveRight])
                         { // backward-right
-                            moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2) * (-front + right);
+                            moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2 * (sideRunPenalty + backRunPenalty) * 0.5f) * (-front + right);
                         }
                         else
                         { // backward-left
-                            moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2) * (-front - right);
+                            moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2 * (sideRunPenalty + backRunPenalty) * 0.5f) * (-front - right);
                         }
                     }
                 }
@@ -71,11 +84,11 @@ public class UnityChanCharacter : Character
                 {
                     if (active[(int)Action.moveRight])
                     { // right
-                        moveVector = (Time.deltaTime * currRunSpeed) * right;
+                        moveVector = (Time.deltaTime * currRunSpeed * sideRunPenalty) * right;
                     }
                     else
                     { // left
-                        moveVector = (Time.deltaTime * currRunSpeed) * -right;
+                        moveVector = (Time.deltaTime * currRunSpeed * sideRunPenalty) * -right;
                     }
                 }
             }
@@ -89,7 +102,7 @@ public class UnityChanCharacter : Character
                     }
                     else
                     { // backward
-                        moveVector = (Time.deltaTime * currRunSpeed) * -front;
+                        moveVector = (Time.deltaTime * currRunSpeed * backRunPenalty) * -front;
                     }
                 }
                 else // no movement at all
@@ -104,6 +117,11 @@ public class UnityChanCharacter : Character
             moveVector = Vector3.zero;
             moving = false;
         }
+        if((moveVector-pastMoveVector).magnitude > runAccel * Time.deltaTime)
+        {
+            moveVector = ((moveVector - pastMoveVector) * runAccel * Time.deltaTime) + pastMoveVector;
+        }
+        pastMoveVector = moveVector;
         transform.position += moveVector;
     }
 
