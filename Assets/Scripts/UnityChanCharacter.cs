@@ -21,9 +21,10 @@ public class UnityChanCharacter : Character
     private Vector3 direction = new Vector3(0f, 0f, 1f);
     //Ground
     private float currRunSpeed = 0f;
-    private float maxRunSpeed = 30f;
-    private float groundAccel = 2f;
-    private float groundDecel = 2f;
+    private float maxRunSpeed = 10f;
+    private float groundAccel = 1f; //acceleration rate proportional to max speed
+    private float groundDecel = 2f; //decelaration rate proportional to max speed
+    private float turnPenalty = 0.75f;
     private float sideRunPenalty = 0.9f;
     private float backRunPenalty = 0.8f;
     //Fly
@@ -36,7 +37,7 @@ public class UnityChanCharacter : Character
 
     private void Start()
     {
-        currRunSpeed = maxRunSpeed;
+        currRunSpeed = 0f;
     }
 
     override public void Act(bool[] active, float[] axis)
@@ -52,7 +53,7 @@ public class UnityChanCharacter : Character
             Vector3 front = characterCam.GetLookVector();
             moving = active[(int)Action.moveForward] || active[(int)Action.moveBackward] || active[(int)Action.moveLeft] || active[(int)Action.moveRight];
 
-            //Check for move type
+            //Ground (full directional control)
             if (moveState == MoveState.ground)
             {
                 if(moving)
@@ -127,32 +128,26 @@ public class UnityChanCharacter : Character
 
 
                 //acceleration and deceleration
-
-                /** slide model
-                 * if ((moveVector - pastMoveVector).magnitude > groundAccel * Time.deltaTime)
-                 *  {
-                 *    moveVector = ((moveVector - pastMoveVector) * groundAccel * Time.deltaTime) + pastMoveVector;
-                 *  }
-                 */
-
                 // turn penalty model
                 if(moving)
                 {
-                    if(moveVector.magnitude > 0.001f)
+                    if (moveVector.magnitude > 0.001f)
                     {
-                        float turnPenalty = 0.5f + 1f * Vector3.Dot(moveVector, direction) / (-2 * moveVector.magnitude);
-                        test += turnPenalty;
-                        currRunSpeed = Mathf.Max(0f, currRunSpeed - (maxRunSpeed * 0.5f * turnPenalty));
+                        float angle = Vector3.Angle(moveVector, direction);
+                        currRunSpeed = Mathf.Max(0f, currRunSpeed * (1f - (turnPenalty * angle / 180f)));
                         direction = moveVector.normalized;
                     }
-                    currRunSpeed = Mathf.Min(maxRunSpeed, currRunSpeed + groundAccel * Time.deltaTime);
-                    Debug.Log(test);
+                    currRunSpeed = Mathf.Min(maxRunSpeed, currRunSpeed + groundAccel * maxRunSpeed * Time.deltaTime);
                 } 
                 else
                 {
-                    currRunSpeed -= groundDecel * Time.deltaTime;
+                    direction = front;
+                    currRunSpeed = Mathf.Max(0, currRunSpeed - groundDecel * maxRunSpeed * Time.deltaTime);
                 }
-                //Debug.Log(currRunSpeed);
+            }
+            if(moveState == MoveState.jump)
+            {
+
             }
 
             
@@ -161,13 +156,11 @@ public class UnityChanCharacter : Character
         //No control
         else
         {
+            currRunSpeed = 0f;
+        }
 
-        }/*
-        else // no movement at all
-        {
-            moveVector = Vector3.zero;
-            moving = false;
-        }*/
+
+        Debug.Log(currRunSpeed);
         transform.position += moveVector;
 
     }
