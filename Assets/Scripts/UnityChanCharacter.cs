@@ -22,10 +22,10 @@ public class UnityChanCharacter : Character
     //Ground
     private float currRunSpeed = 0f;
     private float maxRunSpeed = 10f;
-    private float groundAccel = 1f; //acceleration rate proportional to max speed
-    private float groundDecel = 2f; //decelaration rate proportional to max speed
+    private float groundAccel = 5f; //acceleration rate proportional to max speed
+    private float groundDecel = 9f; //decelaration rate proportional to max speed
     private float turnPenalty = 0.75f;
-    private float sideRunPenalty = 0.9f;
+    private float sideRunPenalty = 1.0f;
     private float backRunPenalty = 0.8f;
     //Fly
 
@@ -159,8 +159,6 @@ public class UnityChanCharacter : Character
             currRunSpeed = 0f;
         }
 
-
-        Debug.Log(currRunSpeed);
         transform.position += moveVector;
 
     }
