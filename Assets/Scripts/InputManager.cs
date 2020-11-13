@@ -101,6 +101,7 @@ public class InputManager : MonoBehaviour
         keyBindings[(int)ActionManager.Action.moveBackward] = new List<KeyCode>() { KeyCode.S };
         keyBindings[(int)ActionManager.Action.moveLeft] = new List<KeyCode>() { KeyCode.A };
         keyBindings[(int)ActionManager.Action.moveRight] = new List<KeyCode>() { KeyCode.D };
+        keyBindings[(int)ActionManager.Action.jump] = new List<KeyCode>() { KeyCode.Space };
         axisBindings[(int)ActionManager.Axis.cameraX] = "Mouse X";
         axisBindings[(int)ActionManager.Axis.cameraY] = "Mouse Y";
     }

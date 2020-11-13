@@ -25,7 +25,7 @@ public class FPCameraManager : MonoBehaviour
         if(active)
         {
             phi = (phi + (moveVector.x * horizontalSensi)) % 360f;
-            theta = Mathf.Max(Mathf.Min(89.5f, theta - (moveVector.y * verticalSensi)), -89.5f);
+            theta = Mathf.Clamp(theta - (moveVector.y * verticalSensi), -90f, 90f);
             transform.localRotation = Quaternion.Euler(theta, phi, 0f);
         }
     }

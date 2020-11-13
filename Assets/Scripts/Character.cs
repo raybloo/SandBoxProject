@@ -11,7 +11,9 @@ public abstract class Character : MonoBehaviour
         moveBackward,
         moveLeft,
         moveRight,
-        jump
+        jump,
+        crouch,
+        attack
     }
 
     public static readonly int axisLength = 2;
@@ -23,9 +25,12 @@ public abstract class Character : MonoBehaviour
 
     public enum MoveState
     {
-        grounded,
-        flying,
-        driving
+        ground,
+        fly,
+        jump,
+        knock,
+        drive,
+        cinematic
     }
 
 

@@ -35,7 +35,7 @@ public class ActionManager : MonoBehaviour
     [Header("Input Source")]
     public InputManager inputManager;
 
-    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight};
+    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight, Action.jump};
     private Axis[] basicAxisSet = new Axis[] { Axis.cameraX, Axis.cameraY };
     
     private Action[] characterActionConverter;
