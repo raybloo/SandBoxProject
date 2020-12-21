@@ -6,33 +6,46 @@ public class UnityChanCharacter : Character
 {
     //[Header("Inspector header")]
     //[Tooltip("Variable tooltip in the inspector")]
-    public FPCameraManager characterCam;
+    public MouseCameraManager characterCam;
     public Animator characterAnimator;
     public CharacterController characterController;
+    public CharacterCollisionManager collisionManager;
 
     private static readonly float HALF_SQRT2 = 0.70710678118f;
 
-    //Movement
-    private MoveState moveState = MoveState.ground;
+    //Movement and Rotation
+    public MoveState moveState = MoveState.ground;
+    private Vector3 front = Vector3.forward;
+    //private Vector3 lookVector = Vector3.zero;
+    private Vector3 right = Vector3.right;
     private float verticalSpeed = 0f;
     private float horizontalSpeed = 0f;
+    private Quaternion cameraRotation = Quaternion.identity;
+    private Quaternion gravityRotation = Quaternion.identity;
+    private Quaternion combinedRotation = Quaternion.identity;
 
     //Self-Induced
     private bool moving = false;
-    private Vector3 moveVector = new Vector3(0f, 0f, 0f);
-    private Vector3 direction = new Vector3(0f, 0f, 1f);
+    private Vector3 horizontalMovement = Vector3.zero;
+    private Vector3 verticalMovement = Vector3.zero;
+    private Vector3 direction = Vector3.forward;
+    float prevTheta, prevPhi = 0;
+
     //Ground
-    private float currRunSpeed = 0f;
-    private float maxRunSpeed = 10f;
+    public float currRunSpeed = 0f;
+    public float maxRunSpeed = 10f;
     private float groundAccel = 5f; //acceleration rate proportional to max speed
     private float groundDecel = 9f; //decelaration rate proportional to max speed
     private float turnPenalty = 0.75f;
     private float sideRunPenalty = 1.0f;
     private float backRunPenalty = 0.8f;
+    private float groundCheckSpeed = 20f;
+
     //Jump/Airborne
-    private float gravity = 20f;
-    private float jumpImpulse = 8f;
-    private float maxFallSpeed = Mathf.NegativeInfinity;
+    public Vector3 gravityDir = new Vector3(0, -1, 0);
+    private float gravity = 30f;
+    private float jumpImpulse = 12f;
+    private float maxFallSpeed = Mathf.Infinity;
 
     private float test = 0f;
 
@@ -49,25 +62,43 @@ public class UnityChanCharacter : Character
         }
     }
 
+    //Act is called upon fixedUpdate
     override public void Act(bool[] action, float[] axis)
     {
         //Camera
-        characterCam.MoveCamera(new Vector2(axis[(int)Character.Axis.cameraX] * Time.deltaTime, axis[(int)Character.Axis.cameraY] * Time.deltaTime));
+        (float theta, float phi) = characterCam.MoveCamera(new Vector2(axis[(int)Character.Axis.cameraX] * Time.fixedDeltaTime, axis[(int)Character.Axis.cameraY] * Time.fixedDeltaTime));
+        characterCam.GetLookVector(out front);
+        InPlaned(ref front);
+
+        //Rotation
+        CameraRotation(theta, phi, out cameraRotation);
+        GravityRotation(gravityDir, out gravityRotation);
+        combinedRotation = cameraRotation * gravityRotation;
+        transform.localRotation = collisionManager.Rotate(in combinedRotation);
+        if(collisionManager.collided) {
+            characterCam.RevertCamera();
+        }
+
+        //transform.localRotation = collisionManager.Rotate(cameraRotation * gravityRotation);
+
+        front = transform.localRotation * Vector3.forward;
 
         //Movement state multiplexer
-        if((moveState == MoveState.fly || moveState == MoveState.jump) && characterController.isGrounded) //landing
+        /*if ((moveState == MoveState.fly || moveState == MoveState.jump) && ) //landing
         {
             //animator.Play("Land");
             verticalSpeed = 0f;
             moveState = MoveState.ground;
             Debug.Log("Land");
-        }
-        if(moveState == MoveState.ground && action[(int)Character.Action.jump]) //jump
+        }*/
+        if(action[(int)Character.Action.jump]) //jump
         {
-            verticalSpeed += jumpImpulse;
+            verticalSpeed = jumpImpulse;
             moveState = MoveState.jump;
             Debug.Log("Jump");
         }
+        
+        
 
 
         //Movement
@@ -75,7 +106,6 @@ public class UnityChanCharacter : Character
         if (moveState != MoveState.knock)
         {
             //Check for player input
-            Vector3 front = characterCam.GetLookVector();
             moving = action[(int)Action.moveForward] || action[(int)Action.moveBackward] || action[(int)Action.moveLeft] || action[(int)Action.moveRight];
 
             //Ground (full directional control)
@@ -83,33 +113,33 @@ public class UnityChanCharacter : Character
             {
                 if(moving)
                 {
-                    front.y = 0;
-                    front.Normalize();
+                    //front.y = 0;
+                    //front.Normalize();
                     if (action[(int)Action.moveLeft] ^ action[(int)Action.moveRight]) //is there lateral movement?
                     {
-                        Vector3 right = characterCam.GetLateralVector();
+                        characterCam.GetLateralVector(out right);
                         if (action[(int)Action.moveForward] ^ action[(int)Action.moveBackward]) //is there forward or backward movement?
                         { //diagonal movement
                             if (action[(int)Action.moveForward])
                             {
                                 if (action[(int)Action.moveRight])
                                 { // forward-right
-                                    moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2) * (front + right);
+                                    horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * HALF_SQRT2) * (front + right);
                                 }
                                 else
                                 { // forward-left
-                                    moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2) * (front - right);
+                                    horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * HALF_SQRT2) * (front - right);
                                 }
                             }
                             else
                             {
                                 if (action[(int)Action.moveRight])
                                 { // backward-right
-                                    moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2 * (sideRunPenalty + backRunPenalty) * 0.5f) * (-front + right);
+                                    horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * HALF_SQRT2 * (sideRunPenalty + backRunPenalty) * 0.5f) * (-front + right);
                                 }
                                 else
                                 { // backward-left
-                                    moveVector = (Time.deltaTime * currRunSpeed * HALF_SQRT2 * (sideRunPenalty + backRunPenalty) * 0.5f) * (-front - right);
+                                    horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * HALF_SQRT2 * (sideRunPenalty + backRunPenalty) * 0.5f) * (-front - right);
                                 }
                             }
                         }
@@ -117,11 +147,11 @@ public class UnityChanCharacter : Character
                         {
                             if (action[(int)Action.moveRight])
                             { // right
-                                moveVector = (Time.deltaTime * currRunSpeed * sideRunPenalty) * right;
+                                horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * sideRunPenalty) * right;
                             }
                             else
                             { // left
-                                moveVector = (Time.deltaTime * currRunSpeed * sideRunPenalty) * -right;
+                                horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * sideRunPenalty) * -right;
                             }
                         }
                     }
@@ -131,23 +161,23 @@ public class UnityChanCharacter : Character
                         { // only forward or backward
                             if (action[(int)Action.moveForward])
                             { // forward
-                                moveVector = (Time.deltaTime * currRunSpeed) * front;
+                                horizontalMovement = (Time.fixedDeltaTime * currRunSpeed) * front;
                             }
                             else
                             { // backward
-                                moveVector = (Time.deltaTime * currRunSpeed * backRunPenalty) * -front;
+                                horizontalMovement = (Time.fixedDeltaTime * currRunSpeed * backRunPenalty) * -front;
                             }
                         }
                         else // no movement at all
                         {
-                            moveVector = Vector3.zero;
+                            horizontalMovement = Vector3.zero;
                             moving = false;
                         }
                     }
                 }
                 else // no movement at all
                 {
-                    moveVector = Vector3.zero;
+                    horizontalMovement = Vector3.zero;
                     moving = false;
                 }
 
@@ -156,18 +186,18 @@ public class UnityChanCharacter : Character
                 // turn penalty model
                 if(moving)
                 {
-                    if (moveVector.magnitude > 0.001f)
+                    if (horizontalMovement.magnitude > 0.001f)
                     {
-                        float angle = Vector3.Angle(moveVector, direction);
+                        float angle = Vector3.Angle(horizontalMovement, direction);
                         currRunSpeed = Mathf.Max(0f, currRunSpeed * (1f - (turnPenalty * angle / 180f)));
-                        direction = moveVector.normalized;
+                        direction = horizontalMovement.normalized;
                     }
-                    currRunSpeed = Mathf.Min(maxRunSpeed, currRunSpeed + groundAccel * maxRunSpeed * Time.deltaTime);
+                    currRunSpeed = Mathf.Min(maxRunSpeed, currRunSpeed + groundAccel * maxRunSpeed * Time.fixedDeltaTime);
                 } 
                 else
                 {
                     direction = front;
-                    currRunSpeed = Mathf.Max(0, currRunSpeed - groundDecel * maxRunSpeed * Time.deltaTime);
+                    currRunSpeed = Mathf.Max(0, currRunSpeed - groundDecel * maxRunSpeed * Time.fixedDeltaTime);
                 }
             }
             if(moveState == MoveState.jump)
@@ -184,22 +214,69 @@ public class UnityChanCharacter : Character
             currRunSpeed = 0f;
         }
 
+        //Gravity Influence
         if(moveState == MoveState.jump || moveState == MoveState.knock)
         {
-            verticalSpeed -= gravity * Time.deltaTime;
+            verticalSpeed -= gravity * Time.fixedDeltaTime;
+        }
+        else if(moveState == MoveState.ground) 
+        {
+            verticalSpeed = -groundCheckSpeed;
         }
         else
         {
             verticalSpeed = 0f;
         }
-        moveVector.y = (verticalSpeed * Time.deltaTime);
-        characterController.Move(moveVector);
 
+        //Horizontal Movement
+        if (horizontalMovement != Vector3.zero) {
+            collisionManager.MoveS(in horizontalMovement,out horizontalMovement);
+            transform.position += horizontalMovement;
+        }
+
+        //Vertical Movement
+        if(verticalSpeed != 0f) {
+            verticalMovement = Vector3.up * verticalSpeed * Time.fixedDeltaTime;
+            if (moveState == MoveState.jump || moveState == MoveState.knock) 
+            {
+                collisionManager.MoveS(in verticalMovement, out verticalMovement);
+                if(collisionManager.collided) {
+                    moveState = MoveState.ground;
+                }
+                transform.position += verticalMovement;
+            } 
+            else if (moveState == MoveState.ground)
+            {
+                collisionManager.MoveRB(in verticalMovement, out verticalMovement);
+                if (collisionManager.collided) 
+                {
+                    transform.position += verticalMovement;
+                } 
+                else 
+                {
+                    moveState = MoveState.jump;
+                    verticalSpeed = 0f;
+                }
+            } 
+            else 
+            {
+
+            }
+
+        }
+        
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+    private void CameraRotation(float theta, float phi, out Quaternion cameraRotation) { //Rotation absolue
+        cameraRotation = Quaternion.Euler(theta, phi, 0f);
+    }
+
+    private void GravityRotation(in Vector3 gravity, out Quaternion gravityRotation) { //Rotation ?
+        gravityRotation = Quaternion.FromToRotation(Vector3.down, gravity);
+    }
+
+    private void InPlaned(ref Vector3 vec) {
+        vec.y = 0;
+        vec = vec.normalized;
     }
 }

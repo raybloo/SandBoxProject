@@ -52,7 +52,7 @@ public class InputManager : MonoBehaviour
         currentAxisSet = newAxisSet;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         for(int i = 0; i < currentActionSetPress.Length; i++) // Press Action i
         {

@@ -88,7 +88,6 @@ public class ActionManager : MonoBehaviour
                 }
             }
         }
-
     }
 
     // Update is called once per frame
