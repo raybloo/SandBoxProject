@@ -8,7 +8,7 @@ public class ActionManager : MonoBehaviour
     
     
 
-    public static readonly int actionsLength = 8;
+    public static readonly int actionsLength = 17;
     public enum Action
     {
         menuDown,
@@ -16,9 +16,18 @@ public class ActionManager : MonoBehaviour
         menuSelect,
         moveForward,
         moveBackward,
-        moveLeft,
-        moveRight,
+        strafeLeft,
+        strafeRight,
         jump,
+        attack,
+        slide,
+        brake,
+        boost,
+        ability1,
+        ability2,
+        ability3,
+        ultimate,
+        melee,
     }
 
     public static readonly int axisLength = 2;
@@ -35,7 +44,7 @@ public class ActionManager : MonoBehaviour
     [Header("Input Source")]
     public InputManager inputManager;
 
-    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.moveLeft, Action.moveRight, Action.jump};
+    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.strafeLeft, Action.strafeRight, Action.jump, Action.attack, Action.slide, Action.ability1 };
     private Axis[] basicAxisSet = new Axis[] { Axis.cameraX, Axis.cameraY };
     
     private Action[] characterActionConverter;

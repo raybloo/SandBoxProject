@@ -52,7 +52,7 @@ public class InputManager : MonoBehaviour
         currentAxisSet = newAxisSet;
     }
 
-    void FixedUpdate()
+    void Update()
     {
         for(int i = 0; i < currentActionSetPress.Length; i++) // Press Action i
         {
@@ -99,9 +99,12 @@ public class InputManager : MonoBehaviour
     {
         keyBindings[(int)ActionManager.Action.moveForward] = new List<KeyCode>() { KeyCode.W };
         keyBindings[(int)ActionManager.Action.moveBackward] = new List<KeyCode>() { KeyCode.S };
-        keyBindings[(int)ActionManager.Action.moveLeft] = new List<KeyCode>() { KeyCode.A };
-        keyBindings[(int)ActionManager.Action.moveRight] = new List<KeyCode>() { KeyCode.D };
+        keyBindings[(int)ActionManager.Action.strafeLeft] = new List<KeyCode>() { KeyCode.A };
+        keyBindings[(int)ActionManager.Action.strafeRight] = new List<KeyCode>() { KeyCode.D };
         keyBindings[(int)ActionManager.Action.jump] = new List<KeyCode>() { KeyCode.Space };
+        keyBindings[(int)ActionManager.Action.attack] = new List<KeyCode>() { KeyCode.Mouse0 };
+        keyBindings[(int)ActionManager.Action.slide] = new List<KeyCode>() { KeyCode.LeftShift };
+        keyBindings[(int)ActionManager.Action.ability1] = new List<KeyCode>() { KeyCode.Q };
         axisBindings[(int)ActionManager.Axis.cameraX] = "Mouse X";
         axisBindings[(int)ActionManager.Axis.cameraY] = "Mouse Y";
     }

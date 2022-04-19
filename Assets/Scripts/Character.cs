@@ -2,18 +2,25 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class Character : MonoBehaviour
+public abstract class Character : Movable
 {
-    public static readonly int actionsLength = 5;
+    public static readonly int actionsLength = 14;
     public enum Action
     {
         moveForward,
         moveBackward,
-        moveLeft,
-        moveRight,
+        strafeLeft,
+        strafeRight,
         jump,
-        crouch,
-        attack
+        attack,
+        slide,
+        brake,
+        boost,
+        ability1,
+        ability2,
+        ability3,
+        ultimate,
+        melee,
     }
 
     public static readonly int axisLength = 2;
@@ -33,11 +40,28 @@ public abstract class Character : MonoBehaviour
         cinematic
     }
 
+    public enum State
+    {
+        alive,
+        stunned,
+        silenced,
+        dead
+    }
 
     [Header("Stats Variable")]
-    protected float health;
-    protected float groundSpeed;
-    protected int status;
+    public float health;
+    public float speedCap;
+    public State status;
+    public Character killer;
+    public Animator characterAnimator;
+
     abstract public void Act(bool[] actions, float[] axis);
 
+    public void Damage(Character source, float amount) {
+        health -= amount;
+        if(health < 0f) {
+            health = 0f;
+            status = State.dead;
+        }
+    }
 }

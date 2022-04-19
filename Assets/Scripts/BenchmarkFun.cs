@@ -194,7 +194,7 @@ public class BenchmarkFun : MonoBehaviour
     }
 
     //use the out parameter as a buffer (private class member)
-    void ModifyC(Vector3 vec, out Vector3 res) { //Even Faster
+    void ModifyC(Vector3 vec, out Vector3 res) { //Slower
         res.x = (vec.x * 2 + 1) % 57;
         res.y = (vec.y + vec.x + 5) % 109;
         res.z = (vec.z + vec.x + vec.y + 3) % 97;

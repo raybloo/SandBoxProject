@@ -5,6 +5,7 @@ using UnityEngine;
 public class PlayerSuperviser : MonoBehaviour
 {
     public static readonly int actionsLength = 3;
+
     public enum Action
     {
         menuDown,
@@ -17,6 +18,7 @@ public class PlayerSuperviser : MonoBehaviour
     {
 
     }
+
     // Start is called before the first frame update
     void Start()
     {
