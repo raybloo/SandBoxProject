@@ -84,7 +84,7 @@ public class CharacterCollisionManager : MonoBehaviour
                             break;
                         } else if (j == 2) {
                             Debug.LogError("Non invertible matrix");
-                            return Vector3.zero;
+                            return new Vector3(float.NaN, float.NaN, float.NaN);
                         }     
                     }
                 }
@@ -125,16 +125,16 @@ public class CharacterCollisionManager : MonoBehaviour
         Plane beta = new Plane(Vector3.forward, new Vector3(31f, 35f, 18f));
         Plane gamma = new Plane(new Vector3(1f,3f,0f), new Vector3(0f,3f,0f));
 
-        Debug.Log(alpha.Intersect(beta, gamma));
+        //Debug.Log(alpha.Intersect(beta, gamma));
 
         //probedRotations = new Quaternion[180/maxStepAngle];
     }
 
-    public float MoveFC(in Vector3 movement, out Vector3 corrected) {
+    public bool MoveFC(in Vector3 movement, out Vector3 corrected) {
         collided = false;
         if (!thisCollider) {
             corrected = movement;
-            return 0f; // nothing to do without a Collider attached
+            return true; // nothing to do without a Collider attached
         }
 
         float magnitude = movement.magnitude;
@@ -150,20 +150,22 @@ public class CharacterCollisionManager : MonoBehaviour
         currentMovement = Vector3.zero;
         for (float i = 0f; i < tests; i++) {
             currentMovement += probedMovement;
-            StepMoveFC(ref currentMovement);
+            if(!StepMoveFC(ref currentMovement)) {
+                corrected = currentMovement;
+                return false;
+            }
         }
         corrected = currentMovement;
         //Debug.Log("moveS correction" + corrected + " tests :" + tests);
-        return Vector3.Angle(movement, corrected);
-
+        return true;
 
     }
 
-    public void StepMoveFC(ref Vector3 movement) {
+    public bool StepMoveFC(ref Vector3 movement) {
 
         collided = false;
         if (!thisCollider)
-            return; // nothing to do without a Collider attached
+            return true; // nothing to do without a Collider attached
         //Debug.Log("collision start");
         float radius = thisCollider.radius;
         float height = thisCollider.height - (2 * radius);
@@ -219,6 +221,10 @@ public class CharacterCollisionManager : MonoBehaviour
                             } else {
                                 CombineDepenVectors(ref combinedDepen, direction * distance);
                             }
+                            if(float.IsNaN(combinedDepen.x) || float.IsNaN(combinedDepen.y) || float.IsNaN(combinedDepen.z)) {
+                                //Debug.LogWarning("Uncombinable collision vectors");
+                                return false;
+                            }
                             //Debug.Log("Collision with " + collider.gameObject.name);
                             //Instantiate(VectShow, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, direction * distance));
                             //Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, combinedDepen));
@@ -236,7 +242,7 @@ public class CharacterCollisionManager : MonoBehaviour
                     //    Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
                     //}
                     movement += correction; // No more colliding objects, corrected movement applied
-                    return;
+                    return true;
                 }
 
             } else {
@@ -244,11 +250,13 @@ public class CharacterCollisionManager : MonoBehaviour
                 //    Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
                 //}
                 movement += correction; // No more colliding objects, corrected movement applied
-                return;
+                return true;
             }
         }
 
-        Debug.Log("Trajectory collision failed");
+        //Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
+        //Debug.Log("Trajectory collision failed");
+
         /*Debug.Log("Collision fail print(" + correction.x + ", " + correction.y + ", " + correction.z + ") count: "+dePenVectorCount);
         foreach (Vector3 vectr in dePenetrationVectors) {
             Debug.Log("Depens: ("+vectr.x+", "+vectr.y+", "+vectr.z+")");
@@ -265,15 +273,15 @@ public class CharacterCollisionManager : MonoBehaviour
             }
             if (collider == thisCollider || collider.isTrigger) {
                 movement = Vector3.zero; // Stay in place
-                return;
+                return false;
             } else {
                 collided = false;
-                Debug.LogWarning("Moving Through");
-                return; // Move disregarding collision
+                //Debug.LogWarning("Collision at start, Moving Through");
+                return false; // Move disregarding collision
             }
         } else {
             movement = Vector3.zero; // Stay in place
-            return;
+            return false;
         }
     }
 
@@ -436,8 +444,8 @@ public class CharacterCollisionManager : MonoBehaviour
             }
         }
 
-        Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
-        Debug.Log("Trajectory collision failed");
+        //Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
+        //Debug.Log("Trajectory collision failed");
 
 
         //Collision failed, decide to move or not

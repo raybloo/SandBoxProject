@@ -35,6 +35,7 @@ public class UnityChanCharacter : Character
     private Quaternion combinedRotation = Quaternion.identity;
     private Vector3 front = Vector3.forward;
     private Vector3 right = Vector3.right;
+    private Vector3 up = Vector3.up;
     private float theta = 0, phi = 0;
     private bool freeCamera = false;
 
@@ -139,6 +140,7 @@ public class UnityChanCharacter : Character
         transform.localRotation = combinedRotation;
         front = transform.forward;
         right = transform.right;
+        up = transform.up;
 
         //Momentum dispatch 
         /* physically somewhat more correct yet behaving weirdly especially if the gravity has a big variability
@@ -224,42 +226,7 @@ public class UnityChanCharacter : Character
                 //Determine Speed and Direction
                 float angle = Vector3.Angle(horizontalMomentum, inputMovement);
                 if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
-                    speedCap *= 0.75f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 720f);
-                }
-                if (!action[(int)Action.brake]) //Acceleration
-                {
-                    if(speedCap < speedCapAutoGenerationThreshold) {
-                        speedCap = Mathf.Min(speedCap + Time.deltaTime * speedCapAutoGenerationRate, speedCapAutoGenerationThreshold);
-                    }
-                    maxSpeed = Mathf.Sqrt(speedCap * 10f);
-                    horizontalMomentum = (inputMovement * maxSpeed);
-                    horizontalSpeed = horizontalMomentum.magnitude;
-                } 
-                else //Braking
-                {
-                    speedCap *= 0.5f + ((angle - speedCapTurnToleranceRate * Time.deltaTime) / 360f);
-                    maxSpeed = Mathf.Sqrt(speedCap * 2.5f);
-                    horizontalMomentum = (inputMovement * maxSpeed);
-                    horizontalSpeed = horizontalMomentum.magnitude;
-                }
-            }
-
-            //Jumping (reduced directional control)
-            if (moveState == MoveState.jump)
-            {
-                //Determine Direction
-                if (!action[(int)Action.brake]) {
-                    inputMovement = front;
-                } else // no movement at all
-                  {
-
-                }
-
-
-                //Determine Speed and Direction
-                float angle = Vector3.Angle(horizontalMomentum, inputMovement);
-                if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
-                    speedCap *= 0.75f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 720f);
+                    speedCap *= 0.5f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 360f);
                 }
                 if (!action[(int)Action.brake]) //Acceleration
                 {
@@ -271,8 +238,47 @@ public class UnityChanCharacter : Character
                     horizontalSpeed = horizontalMomentum.magnitude;
                 } else //Braking
                   {
-                    speedCap *= 0.5f + ((angle - speedCapTurnToleranceRate * Time.deltaTime) / 360f);
-                    maxSpeed = Mathf.Sqrt(speedCap * 2.5f);
+                    if (speedCap < speedCapAutoGenerationThreshold) {
+                        speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
+                    }
+                    maxSpeed = Mathf.Sqrt(speedCap * 5f);
+                    horizontalMomentum = (inputMovement * maxSpeed);
+                    horizontalSpeed = horizontalMomentum.magnitude;
+                }
+            }
+
+            //Jumping (reduced directional control)
+            if (moveState == MoveState.jump)
+            {
+                //Determine Direction
+                if (!action[(int)Action.brake]) {
+                    inputMovement = front;
+                } 
+                else // no movement at all
+                {
+
+                }
+
+
+                //Determine Speed and Direction
+                float angle = Vector3.Angle(horizontalMomentum, inputMovement);
+                if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
+                    speedCap *= 0.5f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 360f);
+                }
+                if (!action[(int)Action.brake]) //Acceleration
+                {
+                    if (speedCap < speedCapAutoGenerationThreshold) {
+                        speedCap = Mathf.Min(speedCap + Time.deltaTime * speedCapAutoGenerationRate, speedCapAutoGenerationThreshold);
+                    }
+                    maxSpeed = Mathf.Sqrt(speedCap * 10f);
+                    horizontalMomentum = (inputMovement * maxSpeed);
+                    horizontalSpeed = horizontalMomentum.magnitude;
+                } else //Braking
+                  {
+                    if (speedCap < speedCapAutoGenerationThreshold) {
+                        speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
+                    }
+                    maxSpeed = Mathf.Sqrt(speedCap * 5f);
                     horizontalMomentum = (inputMovement * maxSpeed);
                     horizontalSpeed = horizontalMomentum.magnitude;
                 }
@@ -289,15 +295,23 @@ public class UnityChanCharacter : Character
         //Apply Horizontal Movement
         if (horizontalMomentum != Vector3.zero) {
             horizontalMovement = Time.deltaTime * horizontalMomentum;
-            if(!collisionManager.MoveS(in horizontalMovement, out horizontalMovement)) {
+            if(!collisionManager.MoveFC(in horizontalMovement, out horizontalMovement)) {
                 horizontalMovement -= gravityDir * Time.deltaTime;
-                if (!collisionManager.MoveS(in horizontalMovement, out horizontalMovement)) {
+                if (!collisionManager.MoveFC(in horizontalMovement, out horizontalMovement)) {
                     horizontalMovement -= gravityDir * Time.deltaTime;
-                    if (!collisionManager.MoveS(in horizontalMovement, out horizontalMovement)) {
+                    if (!collisionManager.MoveFC(in horizontalMovement, out horizontalMovement)) {
                         horizontalMovement -= gravityDir * Time.deltaTime;
-                        collisionManager.MoveS(in horizontalMovement, out horizontalMovement);
+                        if (!collisionManager.MoveFC(in horizontalMovement, out horizontalMovement)) {
+                            horizontalMovement -= gravityDir * Time.deltaTime;
+                            collisionManager.MoveFC(in horizontalMovement, out horizontalMovement);
+                        }
                     }
                 }
+            }
+            if(Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement) > 30f) {
+                Debug.LogWarning("Hard Collision " + Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement));
+                //Debug.LogWarning("Input " + inputMovement);
+                //Debug.LogWarning("Movement " + planProject(horizontalMovement, transform.up));
             }
             transform.position += horizontalMovement;
         }
@@ -389,6 +403,11 @@ public class UnityChanCharacter : Character
     private void InPlaned(ref Vector3 vec) {
         vec.y = 0;
         vec = vec.normalized;
+    }
+
+    //Assumes n is normalized
+    private Vector3 planProject(in Vector3 u, in Vector3 n) {
+        return u - (Vector3.Dot(u, n) * n);
     }
 
     /*
