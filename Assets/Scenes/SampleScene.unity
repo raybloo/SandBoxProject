@@ -2660,7 +2660,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tolerance: 0
   collided: 0
-  collisionAngle: 0
+  bumpVector: {x: 0, y: 0, z: 0}
   thisCollider: {fileID: 173498720}
   maxStepAngle: 15
   sphere1: {fileID: 257171263}
@@ -13020,7 +13020,7 @@ MonoBehaviour:
   circleCenter: {x: -45, y: 300, z: 100}
   circleRadius: 45
   projectionVector: {x: 1, y: 0, z: 1}
-  collider: {fileID: 0}
+  collider: {fileID: 797974618}
 --- !u!1 &806388997
 GameObject:
   m_ObjectHideFlags: 0
@@ -17725,7 +17725,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tolerance: 0.001
   collided: 0
-  collisionAngle: 0
+  bumpVector: {x: 0, y: 0, z: 0}
   thisCollider: {fileID: 0}
   maxStepAngle: 15
   sphere1: {fileID: 0}

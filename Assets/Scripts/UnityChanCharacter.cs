@@ -62,6 +62,9 @@ public class UnityChanCharacter : Character
     //Externally-induced
     //Knock
     private Vector3 knockVector = new Vector3(0f, 0f, 0f);
+    private Vector3 knockHorizontal = new Vector3(0f, 0f, 0f);
+    private Vector3 knockVertical = new Vector3(0f, 0f, 0f);
+    private float controlLossThreshold = 30f;
 
     //Movement stats
     public float speedCapAutoGenerationRate = 20f; //speedCap per second
@@ -188,7 +191,15 @@ public class UnityChanCharacter : Character
         }
 
         //Jump
-        if (action[(int)Character.Action.jump]) { //&& moveState == MoveState.ground) {
+        if (action[(int)Character.Action.jump] && moveState != MoveState.knock) { //&& moveState == MoveState.ground) {
+            verticalSpeed = -jumpImpulse;
+            verticalMomentum = gravityDir * verticalSpeed;
+            moveState = MoveState.jump;
+            characterAnimator.SetBool("airborne", true);
+            characterAnimator.SetBool("rising", true);
+        }
+
+        if (action[(int)Character.Action.jump]) {
             verticalSpeed = -jumpImpulse;
             verticalMomentum = gravityDir * verticalSpeed;
             moveState = MoveState.jump;
@@ -197,99 +208,54 @@ public class UnityChanCharacter : Character
         }
 
         //Movement
-        //Full control (Move Input Check)
-        if (moveState != MoveState.knock)
-        {
-            //Check for player input
-            //moving = !action[(int)Action.brake];//action[(int)Action.moveForward] || action[(int)Action.moveBackward] || action[(int)Action.moveLeft] || action[(int)Action.moveRight];
 
-            //Ground (full directional control)
-            if (moveState == MoveState.ground)
+        //Player Input
+
+        //Ground (Full directional control)
+        if (moveState == MoveState.ground) {
+            //Determine Direction
+            if (action[(int)Action.strafeLeft] ^ action[(int)Action.strafeRight]) {
+                if (action[(int)Action.strafeLeft]) {
+                    inputMovement = front * strafingForwardCoeff - right * strafingLateralCoeff;
+                } else {
+                    inputMovement = front * strafingForwardCoeff + right * strafingLateralCoeff;
+                }
+            } 
+            else // Straight Movement
             {
-                //Determine Direction
-                if(action[(int)Action.strafeLeft] ^ action[(int)Action.strafeRight])
-                {
-                    if (action[(int)Action.strafeLeft]) {
-                        inputMovement = front * strafingForwardCoeff - right * strafingLateralCoeff;
-                    } 
-                    else 
-                    {
-                        inputMovement = front * strafingForwardCoeff + right * strafingLateralCoeff;
-                    }
-                }
-                else // no movement at all
-                {
-                    inputMovement = front;
-                }
-
-
-                //Determine Speed and Direction
-                float angle = Vector3.Angle(horizontalMomentum, inputMovement);
-                if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
-                    speedCap *= 0.5f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 360f);
-                }
-                if (!action[(int)Action.brake]) //Acceleration
-                {
-                    if (speedCap < speedCapAutoGenerationThreshold) {
-                        speedCap = Mathf.Min(speedCap + Time.deltaTime * speedCapAutoGenerationRate, speedCapAutoGenerationThreshold);
-                    }
-                    maxSpeed = Mathf.Sqrt(speedCap * 10f);
-                    horizontalMomentum = (inputMovement * maxSpeed);
-                    horizontalSpeed = horizontalMomentum.magnitude;
-                } else //Braking
-                  {
-                    if (speedCap < speedCapAutoGenerationThreshold) {
-                        speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
-                    }
-                    maxSpeed = Mathf.Sqrt(speedCap * 5f);
-                    horizontalMomentum = (inputMovement * maxSpeed);
-                    horizontalSpeed = horizontalMomentum.magnitude;
-                }
+                inputMovement = front;
             }
 
-            //Jumping (reduced directional control)
-            if (moveState == MoveState.jump)
-            {
-                //Determine Direction
-                if (!action[(int)Action.brake]) {
-                    inputMovement = front;
-                } 
-                else // no movement at all
-                {
-
-                }
-
-
-                //Determine Speed and Direction
-                float angle = Vector3.Angle(horizontalMomentum, inputMovement);
-                if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
-                    speedCap *= 0.5f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 360f);
-                }
-                if (!action[(int)Action.brake]) //Acceleration
-                {
-                    if (speedCap < speedCapAutoGenerationThreshold) {
-                        speedCap = Mathf.Min(speedCap + Time.deltaTime * speedCapAutoGenerationRate, speedCapAutoGenerationThreshold);
-                    }
-                    maxSpeed = Mathf.Sqrt(speedCap * 10f);
-                    horizontalMomentum = (inputMovement * maxSpeed);
-                    horizontalSpeed = horizontalMomentum.magnitude;
-                } else //Braking
-                  {
-                    if (speedCap < speedCapAutoGenerationThreshold) {
-                        speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
-                    }
-                    maxSpeed = Mathf.Sqrt(speedCap * 5f);
-                    horizontalMomentum = (inputMovement * maxSpeed);
-                    horizontalSpeed = horizontalMomentum.magnitude;
-                }
-
-            }
-            
         }
-        //No control
-        else
+
+        //Jumping (No strafing)
+        if (moveState == MoveState.jump) {
+            //Determine Direction
+            inputMovement = front;
+
+        }
+
+        //Determine Speed and Direction
+        float angle = Vector3.Angle(horizontalMomentum, inputMovement);
+        if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
+            speedCap *= 0.5f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 360f);
+        }
+        if (!action[(int)Action.brake]) //Acceleration
         {
-            //horizontalSpeed = 0f;
+            if (speedCap < speedCapAutoGenerationThreshold) {
+                speedCap = Mathf.Min(speedCap + Time.deltaTime * speedCapAutoGenerationRate, speedCapAutoGenerationThreshold);
+            }
+            maxSpeed = Mathf.Sqrt(speedCap * 10f);
+            horizontalMomentum = (inputMovement * maxSpeed);
+            horizontalSpeed = horizontalMomentum.magnitude;
+        } else //Braking
+          {
+            if (speedCap < speedCapAutoGenerationThreshold) {
+                speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
+            }
+            maxSpeed = Mathf.Sqrt(speedCap * 5f);
+            horizontalMomentum = (inputMovement * maxSpeed);
+            horizontalSpeed = horizontalMomentum.magnitude;
         }
 
         //Apply Horizontal Movement
@@ -310,17 +276,18 @@ public class UnityChanCharacter : Character
             }
             if(Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement) > 30f) {
                 Debug.LogWarning("Hard Collision " + Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement));
-                //Debug.LogWarning("Input " + inputMovement);
-                //Debug.LogWarning("Movement " + planProject(horizontalMovement, transform.up));
             }
+
+            float verticalBump = Vector3.Dot(collisionManager.bumpVector, verticalMomentum);
+
             transform.position += horizontalMovement;
         }
         
         //Apply Vertical Movement
-        verticalMovement = verticalMomentum * Time.deltaTime;
         if (moveState == MoveState.jump || moveState == MoveState.knock) 
         {
-            collisionManager.MoveS(in verticalMovement, out verticalMovement);
+            verticalMovement = verticalMomentum * Time.deltaTime;
+            collisionManager.MoveS(in verticalMovement, out verticalMovement); //TODO replace with FC maybe
             if(collisionManager.collided && verticalSpeed > 0f) {
                 moveState = MoveState.ground;
                 characterAnimator.SetBool("airborne", false);
@@ -330,13 +297,13 @@ public class UnityChanCharacter : Character
         } 
         else if (moveState == MoveState.ground)
         {
-            verticalMovement = gravityDir * (Time.deltaTime * (traction + (slopeMax * horizontalSpeed)));
+            verticalMovement = gravityDir * (Time.deltaTime * (traction + (slopeMax * horizontalSpeed))); //more a ground check than a movement
             collisionManager.MoveRB(in verticalMovement, out verticalMovement);
-            if (collisionManager.collided) 
+            if (collisionManager.collided) //ground is still under the feet
             {
                 transform.position += verticalMovement;
             } 
-            else 
+            else //slip off a ledge
             {
                 moveState = MoveState.jump;
                 characterAnimator.SetBool("airborne", true);

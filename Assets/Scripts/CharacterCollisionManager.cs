@@ -12,7 +12,9 @@ public class CharacterCollisionManager : MonoBehaviour
     public float tolerance = 0.001f;
     
     public bool collided = false;
-    public float collisionAngle = 0f;
+    public bool bumped = false;
+    //public float collisionAngle = 0f;
+    public Vector3 bumpVector = Vector3.zero;
 
     public CapsuleCollider thisCollider;
     private Collider[] neighbours;
@@ -34,6 +36,11 @@ public class CharacterCollisionManager : MonoBehaviour
     private int dePenVectorCount;
     private Vector3 otherPosition = Vector3.zero;
     private Quaternion otherRotation = Quaternion.identity;
+
+    //Globals to avoid reinstancing
+    private Collider collider;
+    private Vector3 combinedDepen;
+    private Vector3 combinedBump;
 
     //Rotation
     public int maxStepAngle = 15;
@@ -130,8 +137,16 @@ public class CharacterCollisionManager : MonoBehaviour
         //probedRotations = new Quaternion[180/maxStepAngle];
     }
 
+    //Move full combining depen vectors
     public bool MoveFC(in Vector3 movement, out Vector3 corrected) {
         collided = false;
+        if(bumped) {
+            bumped = false;
+            bumpVector.x = 0f;
+            bumpVector.y = 0f;
+            bumpVector.z = 0f;
+        }
+
         if (!thisCollider) {
             corrected = movement;
             return true; // nothing to do without a Collider attached
@@ -146,6 +161,8 @@ public class CharacterCollisionManager : MonoBehaviour
             }
         }
 
+        //Debug.Log("tests " + tests);
+
         probedMovement = movement * (1f / tests);
         currentMovement = Vector3.zero;
         for (float i = 0f; i < tests; i++) {
@@ -155,15 +172,12 @@ public class CharacterCollisionManager : MonoBehaviour
                 return false;
             }
         }
-        corrected = currentMovement;
-        //Debug.Log("moveS correction" + corrected + " tests :" + tests);
-        return true;
 
+        corrected = currentMovement;
+        return true;
     }
 
     public bool StepMoveFC(ref Vector3 movement) {
-
-        collided = false;
         if (!thisCollider)
             return true; // nothing to do without a Collider attached
         //Debug.Log("collision start");
@@ -187,20 +201,12 @@ public class CharacterCollisionManager : MonoBehaviour
 
             if (count > 0) {
                 //Iter over all intersecting neighbours
-                var collider = neighbours[0];
-                Vector3 combinedDepen = Vector3.zero;
-                //Debug.Log("start");
-                //for (int i = 0; i < count; i++) {
-                //    if (neighbours[i]) {
-                //        Debug.Log(neighbours[i].name);
-                //    }
-                //}
-                //Debug.Log("end");
+                combinedDepen = Vector3.zero;
+                combinedBump = Vector3.zero;
+
                 for (int i = 0; i < count; ++i) {
                     collider = neighbours[i];
-
                     if (collider != thisCollider && !collider.isTrigger) {
-
                         // Compute depen vector
                         otherPosition = collider.gameObject.transform.position;
                         otherRotation = collider.gameObject.transform.rotation;
@@ -210,17 +216,18 @@ public class CharacterCollisionManager : MonoBehaviour
                             out Vector3 direction, out float distance
                         );
 
-                        //Instantiate(VectShow, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, direction * distance));
-                        //if (direction * distance == Vector3.zero) {
-                        //    Debug.LogWarning("Depen Vector Computation failed");
-                        //}
-                        // Combine depen vectors
                         if (overlapped) {  
                             if (combinedDepen == Vector3.zero) {
                                 combinedDepen = direction * distance;
                             } else {
                                 CombineDepenVectors(ref combinedDepen, direction * distance);
                             }
+
+                            if(collider.CompareTag("Obstacle")) {
+                                combinedBump += direction;
+                                bumped = true;
+                            }
+                            
                             if(float.IsNaN(combinedDepen.x) || float.IsNaN(combinedDepen.y) || float.IsNaN(combinedDepen.z)) {
                                 //Debug.LogWarning("Uncombinable collision vectors");
                                 return false;
@@ -236,31 +243,19 @@ public class CharacterCollisionManager : MonoBehaviour
                 //    CombineDepenVectors(ref correction, combinedDepen);
                 //}
                 correction += combinedDepen;
-
+                bumpVector += combinedBump;
                 if (combinedDepen == Vector3.zero) {
-                    //if(correction != Vector3.zero) {
-                    //    Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
-                    //}
                     movement += correction; // No more colliding objects, corrected movement applied
                     return true;
                 }
 
             } else {
-                //if (correction != Vector3.zero) {
-                //    Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
-                //}
                 movement += correction; // No more colliding objects, corrected movement applied
                 return true;
             }
         }
 
-        //Instantiate(VectShowRed, thisCollider.transform.position, Quaternion.FromToRotation(Vector3.up, correction));
-        //Debug.Log("Trajectory collision failed");
-
-        /*Debug.Log("Collision fail print(" + correction.x + ", " + correction.y + ", " + correction.z + ") count: "+dePenVectorCount);
-        foreach (Vector3 vectr in dePenetrationVectors) {
-            Debug.Log("Depens: ("+vectr.x+", "+vectr.y+", "+vectr.z+")");
-        }*/
+        //Collision has failed, either movement is ignored or collision is ignored
         count = Physics.OverlapCapsuleNonAlloc(start, end, radius - tolerance, neighbours);
         if (count > 0) {
             var collider = neighbours[0];
@@ -276,7 +271,6 @@ public class CharacterCollisionManager : MonoBehaviour
                 return false;
             } else {
                 collided = false;
-                //Debug.LogWarning("Collision at start, Moving Through");
                 return false; // Move disregarding collision
             }
         } else {
