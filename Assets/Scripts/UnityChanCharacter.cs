@@ -33,6 +33,7 @@ public class UnityChanCharacter : Character
     private Quaternion cameraRotation = Quaternion.identity;
     private Quaternion gravityRotation = Quaternion.identity;
     private Quaternion combinedRotation = Quaternion.identity;
+    private Quaternion momentumTurn = Quaternion.identity; // Physically inacurate rotation of momentum when gravity changes
     private Vector3 front = Vector3.forward;
     private Vector3 right = Vector3.right;
     private Vector3 up = Vector3.up;
@@ -41,19 +42,19 @@ public class UnityChanCharacter : Character
 
 
     //Ground
-    public float maxSpeed = 10f;
+    public float currentSpeed = 10f; // Actual physical max speed of the character
     private float sideRunPenalty = 1.0f;
     private float backRunPenalty = 0.8f;
-    public float slopeMax = 3f; //slope
-    public float traction = 1f; //constant speed toward the ground
+    public float traction = 1f; // Constant speed toward the ground
+    public float slopeMax = 3f; // Slope amplified traction (multiplied with speed and added to traction)
     public float animationSpeedRatio = 0.5f;
 
     //Jump/Airborne
-    public Vector3 gravityDir = new Vector3(0, -1, 0); //Direction of the current gravity, normalized
-    public Vector3 gravityTarget = new Vector3(0, -1, 0); //Always in the direction of the center, 
+    public Vector3 gravityDir = new Vector3(0, -1, 0); // Direction of the current gravity, normalized
+    public Vector3 gravityTarget = new Vector3(0, -1, 0); // Always in the direction of the center, 
     public Vector3 gravityCenter = new Vector3(0, 10, 0);
-    public float gravityRotationSpeed = 90f; //Gravity vector changes are not instantaneous
-    public float gravity = 30f;
+    public float gravityRotationSpeed = 90f; // Gravity vector changes are not instantaneous
+    public float gravitySpeedCoeff = 10f;
     public bool gravityAttracts = true;
     //public float airDrag = 0.4f;
     private float jumpImpulse = 20f;
@@ -61,8 +62,14 @@ public class UnityChanCharacter : Character
 
     //Externally-induced
     //Knock
+    private float knockDrag = 300f;
+    private float knockCoeffVertical = 0.4f;
+    private float knockCoeffHorizontal = 0.6f;
     private Vector3 knockVector = new Vector3(0f, 0f, 0f);
+    private float knockVerticalComponent = 0f;
+    public float knockHorizontalSqrMag = 0f;
     private Vector3 knockHorizontal = new Vector3(0f, 0f, 0f);
+    private float knockVerticalSpeed = 0f;
     private Vector3 knockVertical = new Vector3(0f, 0f, 0f);
     private float controlLossThreshold = 30f;
 
@@ -106,7 +113,8 @@ public class UnityChanCharacter : Character
     //Act is called upon fixedUpdate
     override public void Act(bool[] action, float[] axis)
     {
-        //Camera
+    
+        //1. Camera
         if(action[(int)Character.Action.slide]) {
             freeCamera = true;
             characterCam.MoveFreeCamera(new Vector2(axis[(int)Character.Axis.cameraX] * Time.deltaTime, axis[(int)Character.Axis.cameraY] * Time.deltaTime));
@@ -121,7 +129,7 @@ public class UnityChanCharacter : Character
         }
 
 
-        //Rotation
+        //2. Rotation
         currentPosition = transform.position;
         SelectGravityManager(currentPosition);
         if (currentGravityManager) {
@@ -139,6 +147,7 @@ public class UnityChanCharacter : Character
         CameraRotation(theta, phi, out cameraRotation); //Relative to previous rotation
         GravityRotation(in gravityDir, ref front, out gravityRotation); //Relative for the forward vector, absolute for the gravity vector
         combinedRotation = gravityRotation * cameraRotation;
+        //the line under
         //transform.localRotation = collisionManager.Rotate(in combinedRotation);
         transform.localRotation = combinedRotation;
         front = transform.forward;
@@ -146,6 +155,7 @@ public class UnityChanCharacter : Character
         up = transform.up;
 
         //Momentum dispatch 
+
         /* physically somewhat more correct yet behaving weirdly especially if the gravity has a big variability
         verticalSpeed = (Vector3.Dot(horizontalMomentum, gravityDir) + Vector3.Dot(verticalMomentum, gravityDir));         
         horizontalMomentum = horizontalMomentum + verticalMomentum - (gravityDir * verticalSpeed);
@@ -153,10 +163,15 @@ public class UnityChanCharacter : Character
         horizontalSpeed = horizontalMomentum.magnitude;
         */
 
-
-        horizontalMomentum = (horizontalMomentum - gravityDir * Vector3.Dot(horizontalMomentum, gravityDir)).normalized * horizontalSpeed;
+        momentumTurn = Quaternion.FromToRotation(verticalMomentum, gravityDir);
+        horizontalMomentum = momentumTurn * horizontalMomentum;
+        //horizontalMomentum = (horizontalMomentum - gravityDir * Vector3.Dot(horizontalMomentum, gravityDir)).normalized * horizontalSpeed;
         verticalMomentum = gravityDir * verticalSpeed;
-       // Debug.DrawLine(currentPosition, currentPosition + horizontalMomentum);
+        knockHorizontal = momentumTurn * knockHorizontal;
+        //Debug.DrawLine(currentPosition, currentPosition + horizontalMomentum * 4f);
+
+
+
 
         //Apply Air drag if Airborne
         /*if (moveState == MoveState.jump || moveState == MoveState.knock) {
@@ -167,27 +182,46 @@ public class UnityChanCharacter : Character
             verticalSpeed *= airDragCoeff;
         }*/
 
-        //Gravity Influence
-        if (moveState == MoveState.jump || moveState == MoveState.knock) {
-            verticalSpeed += gravity * Time.deltaTime;
-            verticalMomentum = gravityDir * verticalSpeed;
-        } else {
-            verticalSpeed = 0f;
-            verticalMomentum = Vector3.zero;
-        }
 
+        //3. Spells and Actions
         //Regular Attack
         if (action[(int)Character.Action.attack]) { 
             if(Time.time > attackCurrentCd) {
                 Projectile projectile = Instantiate(projectilePrefab, characterCam.transform.position, characterCam.transform.rotation).GetComponent<Projectile>();
-                projectile.explosionForce = speedCap * attackExplosionForce;
-                projectile.speed = maxSpeed + attackProjectileSpeed;
+                projectile.explosionForce = currentSpeed * attackExplosionForce;
+                projectile.speed = currentSpeed + attackProjectileSpeed;
                 attackCurrentCd = Time.time + attackCooldown;
                 //TODO animation
                 //characterAnimator.SetBool("airborne", true);
                 //characterAnimator.SetBool("rising", true);
             }
 
+        }
+
+        //
+        //4. Movement
+
+        //4.1 Vertical
+
+        //Vertical Knock
+        if (knockVerticalSpeed != 0f) {
+            verticalSpeed += knockVerticalSpeed;
+            verticalMomentum = gravityDir * verticalSpeed;
+            if (knockVerticalSpeed < 0f) {
+                moveState = MoveState.knock;
+                characterAnimator.SetBool("airborne", true);
+                characterAnimator.SetBool("rising", true);
+            }
+            knockVerticalSpeed = 0f;
+        }
+
+        //Gravity Influence
+        if (moveState == MoveState.jump || moveState == MoveState.knock) {
+            verticalSpeed += gravitySpeedCoeff * currentSpeed * Time.deltaTime;
+            verticalMomentum = gravityDir * verticalSpeed;
+        } else {
+            verticalSpeed = 0f;
+            verticalMomentum = Vector3.zero;
         }
 
         //Jump
@@ -199,17 +233,7 @@ public class UnityChanCharacter : Character
             characterAnimator.SetBool("rising", true);
         }
 
-        if (action[(int)Character.Action.jump]) {
-            verticalSpeed = -jumpImpulse;
-            verticalMomentum = gravityDir * verticalSpeed;
-            moveState = MoveState.jump;
-            characterAnimator.SetBool("airborne", true);
-            characterAnimator.SetBool("rising", true);
-        }
-
-        //Movement
-
-        //Player Input
+        //4.2 Horizontal
 
         //Ground (Full directional control)
         if (moveState == MoveState.ground) {
@@ -228,39 +252,54 @@ public class UnityChanCharacter : Character
 
         }
 
-        //Jumping (No strafing)
-        if (moveState == MoveState.jump) {
+        //Airborne (No strafing)
+        if (moveState == MoveState.jump || moveState == MoveState.knock) {
             //Determine Direction
             inputMovement = front;
-
         }
 
-        //Determine Speed and Direction
-        float angle = Vector3.Angle(horizontalMomentum, inputMovement);
+        //Turn Penalty
+        /*float angle = Vector3.Angle(horizontalMomentum, inputMovement);
         if (angle > speedCapTurnToleranceRate * Time.deltaTime) {
             speedCap *= 0.5f + ((angle - (speedCapTurnToleranceRate * Time.deltaTime)) / 360f);
-        }
-        if (!action[(int)Action.brake]) //Acceleration
+        }*/
+
+        //Acceleration
+        if (!action[(int)Action.brake]) 
         {
             if (speedCap < speedCapAutoGenerationThreshold) {
                 speedCap = Mathf.Min(speedCap + Time.deltaTime * speedCapAutoGenerationRate, speedCapAutoGenerationThreshold);
             }
-            maxSpeed = Mathf.Sqrt(speedCap * 10f);
-            horizontalMomentum = (inputMovement * maxSpeed);
+            currentSpeed = Mathf.Sqrt(speedCap * 10f);
+            horizontalMomentum = (inputMovement * currentSpeed);
             horizontalSpeed = horizontalMomentum.magnitude;
-        } else //Braking
-          {
+        }
+        //Braking
+        else {
             if (speedCap < speedCapAutoGenerationThreshold) {
                 speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
             }
-            maxSpeed = Mathf.Sqrt(speedCap * 5f);
-            horizontalMomentum = (inputMovement * maxSpeed);
+            currentSpeed = Mathf.Sqrt(speedCap * 5f);
+            horizontalMomentum = (inputMovement * currentSpeed);
             horizontalSpeed = horizontalMomentum.magnitude;
         }
 
+        //Horizontal knock drag
+        if (knockHorizontalSqrMag > knockDrag * Time.deltaTime * currentSpeed) {
+            knockHorizontal *= Mathf.Sqrt((knockHorizontalSqrMag - knockDrag * Time.deltaTime * currentSpeed) / knockHorizontalSqrMag);
+            //knockHorizontal *= (knockHorizontalSqrMag - knockDrag) / knockHorizontalSqrMag;
+            knockHorizontalSqrMag = knockHorizontal.sqrMagnitude;
+        } else {
+            knockHorizontal = Vector3.zero;
+            knockHorizontalSqrMag = 0f;
+        }
+
+
+        //4b Movement application
+
         //Apply Horizontal Movement
         if (horizontalMomentum != Vector3.zero) {
-            horizontalMovement = Time.deltaTime * horizontalMomentum;
+            horizontalMovement = Time.deltaTime * (horizontalMomentum + knockHorizontal);
             if(!collisionManager.MoveFC(in horizontalMovement, out horizontalMovement)) {
                 horizontalMovement -= gravityDir * Time.deltaTime;
                 if (!collisionManager.MoveFC(in horizontalMovement, out horizontalMovement)) {
@@ -274,20 +313,25 @@ public class UnityChanCharacter : Character
                     }
                 }
             }
-            if(Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement) > 30f) {
-                Debug.LogWarning("Hard Collision " + Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement));
-            }
-
-            float verticalBump = Vector3.Dot(collisionManager.bumpVector, verticalMomentum);
+            //if(Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement) > 30f) {
+            //    Debug.LogWarning("Hard Collision " + Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement));
+            //}
 
             transform.position += horizontalMovement;
+
+            knockVector = collisionManager.bumpVector.normalized;
+            knockVerticalComponent = Vector3.Dot(knockVector, gravityDir);
+
+            knockVerticalSpeed += knockVerticalComponent * currentSpeed * knockCoeffVertical;
+            knockHorizontal += (knockVector - knockVerticalComponent * gravityDir) * currentSpeed * knockCoeffHorizontal;
+            knockHorizontalSqrMag = knockHorizontal.sqrMagnitude;
         }
-        
+
         //Apply Vertical Movement
         if (moveState == MoveState.jump || moveState == MoveState.knock) 
         {
             verticalMovement = verticalMomentum * Time.deltaTime;
-            collisionManager.MoveS(in verticalMovement, out verticalMovement); //TODO replace with FC maybe
+            collisionManager.MoveFC(in verticalMovement, out verticalMovement);
             if(collisionManager.collided && verticalSpeed > 0f) {
                 moveState = MoveState.ground;
                 characterAnimator.SetBool("airborne", false);
@@ -314,11 +358,6 @@ public class UnityChanCharacter : Character
         } 
         else 
         {
-
-        }
-
-        //Abilities
-        if (freeCamera) {
 
         }
 

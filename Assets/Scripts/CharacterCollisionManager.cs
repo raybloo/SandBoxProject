@@ -216,8 +216,9 @@ public class CharacterCollisionManager : MonoBehaviour
                             out Vector3 direction, out float distance
                         );
 
-                        if (overlapped) {  
+                        if (overlapped) { 
                             if (combinedDepen == Vector3.zero) {
+                                collided = true;
                                 combinedDepen = direction * distance;
                             } else {
                                 CombineDepenVectors(ref combinedDepen, direction * distance);
