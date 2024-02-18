@@ -44,7 +44,7 @@ public class ActionManager : MonoBehaviour
     [Header("Input Source")]
     public InputManager inputManager;
 
-    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.strafeLeft, Action.strafeRight, Action.jump, Action.attack, Action.slide, Action.ability1 };
+    private Action[] basicActionSet = new Action[] { Action.moveForward, Action.moveBackward, Action.strafeLeft, Action.strafeRight, Action.jump, Action.attack, Action.brake, Action.slide, Action.ability1 };
     private Axis[] basicAxisSet = new Axis[] { Axis.cameraX, Axis.cameraY };
     
     private Action[] characterActionConverter;
@@ -52,7 +52,7 @@ public class ActionManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        fillInConverters();
+        FillInConverters();
         inputManager.SetNewActionSet(new Action[0],basicActionSet);
         inputManager.SetNewAxisSet(basicAxisSet);
     }
@@ -73,7 +73,7 @@ public class ActionManager : MonoBehaviour
         character.Act(characterActiveActions, axisValues);
     }
 
-    void fillInConverters()
+    void FillInConverters()
     {
         characterActionConverter = new Action[Enum.GetNames(typeof(Character.Action)).Length];
         foreach(Character.Action charAction in Enum.GetValues(typeof(Character.Action)))

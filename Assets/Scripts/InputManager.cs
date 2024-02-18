@@ -103,6 +103,7 @@ public class InputManager : MonoBehaviour
         keyBindings[(int)ActionManager.Action.strafeRight] = new List<KeyCode>() { KeyCode.D };
         keyBindings[(int)ActionManager.Action.jump] = new List<KeyCode>() { KeyCode.Space };
         keyBindings[(int)ActionManager.Action.attack] = new List<KeyCode>() { KeyCode.Mouse0 };
+        keyBindings[(int)ActionManager.Action.brake] = new List<KeyCode>() { KeyCode.Mouse1 };
         keyBindings[(int)ActionManager.Action.slide] = new List<KeyCode>() { KeyCode.LeftShift };
         keyBindings[(int)ActionManager.Action.ability1] = new List<KeyCode>() { KeyCode.Q };
         axisBindings[(int)ActionManager.Axis.cameraX] = "Mouse X";

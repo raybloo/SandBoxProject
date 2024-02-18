@@ -13,7 +13,7 @@ public class CharacterCollisionManager : MonoBehaviour
     
     public bool collided = false;
     public bool bumped = false;
-    //public float collisionAngle = 0f;
+    public bool hitObstacle = false; 
     public Vector3 bumpVector = Vector3.zero;
 
     public CapsuleCollider thisCollider;
@@ -140,6 +140,7 @@ public class CharacterCollisionManager : MonoBehaviour
     //Move full combining depen vectors
     public bool MoveFC(in Vector3 movement, out Vector3 corrected) {
         collided = false;
+        hitObstacle = false;
         if(bumped) {
             bumped = false;
             bumpVector.x = 0f;
@@ -224,7 +225,10 @@ public class CharacterCollisionManager : MonoBehaviour
                                 CombineDepenVectors(ref combinedDepen, direction * distance);
                             }
 
-                            if(collider.CompareTag("Obstacle")) {
+                            if(collider.CompareTag("Obstacle") || collider.CompareTag("Bumper")) {
+                                if(collider.CompareTag("Obstacle")) {
+                                    hitObstacle = true;
+                                }
                                 combinedBump += direction;
                                 bumped = true;
                             }

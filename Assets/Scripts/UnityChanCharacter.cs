@@ -57,21 +57,22 @@ public class UnityChanCharacter : Character
     public float gravitySpeedCoeff = 10f;
     public bool gravityAttracts = true;
     //public float airDrag = 0.4f;
-    private float jumpImpulse = 20f;
+    private float jumpImpulse = 30f;
     private float maxFallSpeed = Mathf.Infinity;
 
     //Externally-induced
     //Knock
     private float knockDrag = 300f;
-    private float knockCoeffVertical = 0.4f;
-    private float knockCoeffHorizontal = 0.6f;
+    private float knockCoeffVertical = 1f;
+    private float knockCoeffHorizontal = 1.3f;
     private Vector3 knockVector = new Vector3(0f, 0f, 0f);
     private float knockVerticalComponent = 0f;
+    private Vector3 knockHorizontalComponent = new Vector3(0f, 0f, 0f);
+    private float knockVertical = 0f;
     public float knockHorizontalSqrMag = 0f;
     private Vector3 knockHorizontal = new Vector3(0f, 0f, 0f);
-    private float knockVerticalSpeed = 0f;
-    private Vector3 knockVertical = new Vector3(0f, 0f, 0f);
     private float controlLossThreshold = 30f;
+    private bool bumpImmune = false;
 
     //Movement stats
     public float speedCapAutoGenerationRate = 20f; //speedCap per second
@@ -164,9 +165,9 @@ public class UnityChanCharacter : Character
         */
 
         momentumTurn = Quaternion.FromToRotation(verticalMomentum, gravityDir);
-        horizontalMomentum = momentumTurn * horizontalMomentum;
+        //horizontalMomentum = momentumTurn * horizontalMomentum;
         //horizontalMomentum = (horizontalMomentum - gravityDir * Vector3.Dot(horizontalMomentum, gravityDir)).normalized * horizontalSpeed;
-        verticalMomentum = gravityDir * verticalSpeed;
+        //verticalMomentum = gravityDir * verticalSpeed;
         knockHorizontal = momentumTurn * knockHorizontal;
         //Debug.DrawLine(currentPosition, currentPosition + horizontalMomentum * 4f);
 
@@ -204,15 +205,15 @@ public class UnityChanCharacter : Character
         //4.1 Vertical
 
         //Vertical Knock
-        if (knockVerticalSpeed != 0f) {
-            verticalSpeed += knockVerticalSpeed;
+        if (knockVertical != 0f) {
+            verticalSpeed += knockVertical;
             verticalMomentum = gravityDir * verticalSpeed;
-            if (knockVerticalSpeed < 0f) {
+            if (knockVertical < 0f) {
                 moveState = MoveState.knock;
                 characterAnimator.SetBool("airborne", true);
                 characterAnimator.SetBool("rising", true);
             }
-            knockVerticalSpeed = 0f;
+            knockVertical = 0f;
         }
 
         //Gravity Influence
@@ -276,10 +277,10 @@ public class UnityChanCharacter : Character
         }
         //Braking
         else {
-            if (speedCap < speedCapAutoGenerationThreshold) {
+            if (speedCap > 0f) {
                 speedCap = Mathf.Max(speedCap - Time.deltaTime * speedCapAutoGenerationRate, 0f);
             }
-            currentSpeed = Mathf.Sqrt(speedCap * 5f);
+            currentSpeed = Mathf.Sqrt(speedCap * 3f); // approximately half of normal
             horizontalMomentum = (inputMovement * currentSpeed);
             horizontalSpeed = horizontalMomentum.magnitude;
         }
@@ -317,14 +318,33 @@ public class UnityChanCharacter : Character
             //    Debug.LogWarning("Hard Collision " + Vector3.Angle(planProject(horizontalMovement, transform.up), inputMovement));
             //}
 
+            
             transform.position += horizontalMovement;
 
-            knockVector = collisionManager.bumpVector.normalized;
-            knockVerticalComponent = Vector3.Dot(knockVector, gravityDir);
 
-            knockVerticalSpeed += knockVerticalComponent * currentSpeed * knockCoeffVertical;
-            knockHorizontal += (knockVector - knockVerticalComponent * gravityDir) * currentSpeed * knockCoeffHorizontal;
-            knockHorizontalSqrMag = knockHorizontal.sqrMagnitude;
+            //Dispatch bump resulting from collision if any
+            if(collisionManager.bumped && !bumpImmune) {
+
+                bumpImmune = true;
+                knockVector = collisionManager.bumpVector.normalized;
+
+                knockVerticalComponent = Vector3.Dot(knockVector, gravityDir);
+                knockVertical += knockVerticalComponent * currentSpeed * knockCoeffVertical;
+
+                knockHorizontalComponent = (knockVector - knockVerticalComponent * gravityDir);
+                knockHorizontal += currentSpeed * knockCoeffHorizontal * knockHorizontalComponent;
+                knockHorizontalSqrMag = knockHorizontal.sqrMagnitude;
+
+
+                //if (Vector3.Dot(knockVector, horizontalMomentum) < knockVector.magnitude * horizontalSpeed * -0.75f) {
+                if (collisionManager.hitObstacle) {
+                    Debug.Log(Vector3.Dot(knockVector, horizontalMomentum) + " and " + knockVector.magnitude * horizontalSpeed * -0.75f);
+                    speedCap = Mathf.Max(speedCap - 200f, 0f);
+                }
+            }
+            else if(bumpImmune && !collisionManager.bumped) {
+                bumpImmune = false;
+            }
         }
 
         //Apply Vertical Movement
